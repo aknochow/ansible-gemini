@@ -1,0 +1,54 @@
+---
+# Live smoke test across the newest Gemini 3.x text models via Vertex AI.
+#
+# Usage:
+#   ansible-playbook tests/test_models.yml \
+#     -e vertex_project=your-gcp-project-id -e vertex_location=global
+#
+# Or rely on env vars (GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION) and
+# omit -e entirely. Each model is called independently and failures don't
+# abort the run (ignore_errors) so the summary shows pass/fail per model.
+
+- name: Test aknochow.gemini across Gemini 3.x models
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    vertex_project: "{{ lookup('env', 'GOOGLE_CLOUD_PROJECT') }}"
+    vertex_location: "{{ lookup('env', 'GOOGLE_CLOUD_LOCATION') | default('global', true) }}"
+    prompt: "In one sentence, what is Ansible?"
+    models_to_test:
+      - gemini-3-flash-preview
+      - gemini-3.1-pro-preview
+      - gemini-3.1-flash-lite
+      - gemini-3.5-flash
+      - gemini-3.5-flash-lite
+      - gemini-3.6-flash
+
+  tasks:
+    - name: Call generate for each model
+      aknochow.gemini.generate:
+        backend: vertex
+        project_id: "{{ vertex_project }}"
+        location: "{{ vertex_location }}"
+        model: "{{ item }}"
+        max_output_tokens: 128
+        contents: "{{ prompt }}"
+      register: model_results
+      loop: "{{ models_to_test }}"
+      ignore_errors: true
+
+    - name: Summary per model
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.item }}:
+          {{ 'OK' if not item.failed else 'FAILED' }}
+          {{ (item.text | trim) if not item.failed else item.msg }}
+      loop: "{{ model_results.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Overall pass/fail counts
+      ansible.builtin.debug:
+        msg: "{{ model_results.results | rejectattr('failed') | list | length }}/{{ model_results.results | length }} models succeeded"

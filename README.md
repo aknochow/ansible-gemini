@@ -75,7 +75,9 @@ Newer models (e.g. `gemini-3.5-flash`) may only be servable via
 them as available — if you get a `404 NOT_FOUND` on a region you'd expect
 to work, try `global` first.
 
-See `examples/basic_generate.yml` for a runnable playbook.
+See `examples/basic_generate.yml` for a runnable playbook, and
+`examples/model_comparison.yml` to compare Gemini 3.x models against each
+other on correctness/tokens/cost (see below).
 
 ### Thinking models and `max_output_tokens`
 
@@ -104,3 +106,38 @@ credentials required. Live-verified against Vertex AI (`gemini-3.5-flash`,
 `thinking_budget` truncation gotcha above. Live verification against the
 direct Gemini API (`backend: api`) and a broader model/quota survey remain
 open follow-up work.
+
+### Live model smoke test
+
+`tests/test_models.yml` calls `generate` against each of the newest
+Gemini 3.x text models (`gemini-3-flash-preview`, `gemini-3.1-pro-preview`,
+`gemini-3.1-flash-lite`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`,
+`gemini-3.6-flash`) with the same prompt and reports pass/fail per model —
+useful after a model list changes or a new preview lands:
+
+```bash
+ansible-playbook tests/test_models.yml \
+  -e vertex_project=your-gcp-project-id -e vertex_location=global
+```
+
+All 6 confirmed working during development against a Vertex AI project
+with Gemini models enabled. Excludes the 3.x image-generation variants
+(`gemini-3.1-flash-image`, `gemini-3-pro-image`, etc.) since those return a
+different response shape than plain text generation.
+
+### Model comparison example
+
+`examples/model_comparison.yml` runs the same math/sentiment/reasoning
+tasks across all 6 models and reports correctness, token usage, and an
+estimated cost per model (pricing table sourced and cross-checked
+2026-07-27 — preview models' pricing is less certain since it isn't yet
+on Google's own pricing page and may change before GA). Live-run during
+development: all 6 models answered both deterministic tasks correctly;
+`gemini-3.1-flash-lite` was cheapest and `gemini-3.1-pro-preview` priciest
+for that particular task mix — token/pricing differences will vary by
+workload, this isn't a general "always use X" conclusion.
+
+```bash
+ansible-playbook examples/model_comparison.yml \
+  -e vertex_project=your-gcp-project-id -e vertex_location=global
+```
