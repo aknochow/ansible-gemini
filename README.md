@@ -70,7 +70,24 @@ export GOOGLE_CLOUD_LOCATION=us-east5
     contents: "Hello"
 ```
 
+Newer models (e.g. `gemini-3.5-flash`) may only be servable via
+`location: global` on a given project even though `models.list()` shows
+them as available — if you get a `404 NOT_FOUND` on a region you'd expect
+to work, try `global` first.
+
 See `examples/basic_generate.yml` for a runnable playbook.
+
+### Thinking models and `max_output_tokens`
+
+Thinking-capable models (e.g. `gemini-3.5-flash`) spend part of
+`max_output_tokens` on internal reasoning ("thoughts") that's never
+returned in `text` — by default, `thinking_budget` is `0`, disabling
+thinking so `max_output_tokens` is a fully deterministic budget for
+visible output only. If you raise `thinking_budget` above 0, budget
+accordingly: a low `max_output_tokens` combined with a nonzero thinking
+budget can burn the whole budget on thinking and return `finish_reason:
+MAX_TOKENS` with truncated or empty `text` (confirmed live against
+`gemini-3.5-flash` during development — see `result.usage.thoughts_token_count`).
 
 ## Testing
 
@@ -82,6 +99,8 @@ python -m pytest tests/unit/
 ```
 
 Unit tests mock the `google-genai` SDK — no network access or real
-credentials required. Live verification against a real API key/Vertex
-project (and confirming which Gemini models are actually enabled/quota'd
-there) is still open follow-up work.
+credentials required. Live-verified against Vertex AI (`gemini-3.5-flash`,
+`backend: vertex`, `location: global`) during development, including the
+`thinking_budget` truncation gotcha above. Live verification against the
+direct Gemini API (`backend: api`) and a broader model/quota survey remain
+open follow-up work.

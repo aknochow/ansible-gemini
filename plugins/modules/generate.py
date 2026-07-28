@@ -51,6 +51,16 @@ options:
       - List of strings that stop generation when encountered.
     type: list
     elements: str
+  thinking_budget:
+    description:
+      - Token budget for internal "thinking" on thinking-capable models (e.g. gemini-3.5-flash).
+      - Defaults to V(0) (thinking disabled) so O(max_output_tokens) is a deterministic budget for
+        visible output only — on thinking-capable models, a nonzero default would silently consume
+        part of O(max_output_tokens) on internal reasoning never returned to the caller, and could
+        exhaust the whole budget before any visible text is generated (I(finish_reason)=C(MAX_TOKENS)
+        with empty/truncated I(text)). Raise this if you want the model to reason before answering.
+    type: int
+    default: 0
 extends_documentation_fragment:
   - aknochow.gemini.auth
 requirements:
@@ -113,6 +123,9 @@ usage:
     cached_content_token_count:
       description: Input tokens served from cached content.
       type: int
+    thoughts_token_count:
+      description: Tokens spent on internal thinking (nonzero only if O(thinking_budget) was raised above 0).
+      type: int
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -138,6 +151,7 @@ def flatten_response(response):
             candidates_token_count=usage.candidates_token_count,
             total_token_count=usage.total_token_count,
             cached_content_token_count=usage.cached_content_token_count,
+            thoughts_token_count=usage.thoughts_token_count,
         )
         if usage
         else None,
@@ -155,6 +169,7 @@ def main():
         top_p=dict(type="float"),
         top_k=dict(type="int"),
         stop_sequences=dict(type="list", elements="str"),
+        thinking_budget=dict(type="int", default=0),
     )
     argument_spec.update(PROVIDER_ARGSPEC)
 
@@ -168,7 +183,10 @@ def main():
     from google.genai import types
     from google.genai.errors import APIError
 
-    config_kwargs = dict(max_output_tokens=module.params["max_output_tokens"])
+    config_kwargs = dict(
+        max_output_tokens=module.params["max_output_tokens"],
+        thinking_config=types.ThinkingConfig(thinking_budget=module.params["thinking_budget"]),
+    )
     for key in ("system_instruction", "temperature", "top_p", "top_k", "stop_sequences"):
         value = module.params.get(key)
         if value is not None:

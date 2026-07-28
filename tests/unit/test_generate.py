@@ -49,6 +49,7 @@ def make_response(candidates, usage_kwargs=None):
         candidates_token_count=5,
         total_token_count=15,
         cached_content_token_count=None,
+        thoughts_token_count=None,
     )
     defaults.update(usage_kwargs or {})
     for k, v in defaults.items():
