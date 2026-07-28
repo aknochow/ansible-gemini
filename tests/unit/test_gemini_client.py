@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: Apache-2.0
+
+from __future__ import annotations
+
+import sys
+from unittest.mock import MagicMock
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def mock_genai():
+    mock_google = MagicMock()
+    mock_genai_module = MagicMock()
+    mock_genai_module.Client = MagicMock()
+    mock_google.genai = mock_genai_module
+    sys.modules["google"] = mock_google
+    sys.modules["google.genai"] = mock_genai_module
+    yield mock_genai_module
+    sys.modules.pop("google.genai", None)
+    sys.modules.pop("google", None)
+
+
+class TestProviderArgspec:
+    def test_backend_default(self, mock_genai):
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            PROVIDER_ARGSPEC,
+        )
+
+        assert PROVIDER_ARGSPEC["backend"]["default"] == "api"
+        assert PROVIDER_ARGSPEC["backend"]["choices"] == ["api", "vertex"]
+
+    def test_api_key_is_no_log(self, mock_genai):
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            PROVIDER_ARGSPEC,
+        )
+
+        assert PROVIDER_ARGSPEC["api_key"]["no_log"] is True
+
+
+class TestGetClient:
+    def test_api_backend(self, mock_genai):
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            get_client,
+        )
+
+        module = MagicMock()
+        module.params = {
+            "backend": "api",
+            "api_key": "test-key",
+            "project_id": None,
+            "location": None,
+        }
+
+        get_client(module)
+        mock_genai.Client.assert_called_once()
+        call_kwargs = mock_genai.Client.call_args.kwargs
+        assert call_kwargs["api_key"] == "test-key"
+
+    def test_api_backend_requires_api_key(self, mock_genai):
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            get_client,
+        )
+
+        module = MagicMock()
+        module.params = {
+            "backend": "api",
+            "api_key": None,
+            "project_id": None,
+            "location": None,
+        }
+
+        get_client(module)
+        module.fail_json.assert_called_once()
+        assert "api_key" in module.fail_json.call_args.kwargs["msg"]
+
+    def test_vertex_backend(self, mock_genai):
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            get_client,
+        )
+
+        module = MagicMock()
+        module.params = {
+            "backend": "vertex",
+            "api_key": None,
+            "project_id": "my-project",
+            "location": "us-east5",
+        }
+
+        get_client(module)
+        mock_genai.Client.assert_called_once()
+        call_kwargs = mock_genai.Client.call_args.kwargs
+        assert call_kwargs["vertexai"] is True
+        assert call_kwargs["project"] == "my-project"
+        assert call_kwargs["location"] == "us-east5"
+
+    def test_vertex_backend_requires_project_and_location(self, mock_genai):
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            get_client,
+        )
+
+        module = MagicMock()
+        module.params = {
+            "backend": "vertex",
+            "api_key": None,
+            "project_id": None,
+            "location": None,
+        }
+
+        get_client(module)
+        module.fail_json.assert_called_once()
+
+    def test_unknown_backend(self, mock_genai):
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            get_client,
+        )
+
+        module = MagicMock()
+        module.params = {
+            "backend": "carrier-pigeon",
+            "api_key": None,
+            "project_id": None,
+            "location": None,
+        }
+
+        get_client(module)
+        module.fail_json.assert_called_once()
+        assert "Unknown backend" in module.fail_json.call_args.kwargs["msg"]

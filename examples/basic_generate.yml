@@ -1,0 +1,19 @@
+---
+- name: Basic aknochow.gemini.generate example
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Ask Gemini a question
+      aknochow.gemini.generate:
+        model: gemini-3.5-flash
+        max_output_tokens: 256
+        contents: "In one sentence, what is Ansible?"
+      register: result
+
+    - name: Show the response
+      ansible.builtin.debug:
+        msg: "{{ result.text }}"
+
+    - name: Show token usage
+      ansible.builtin.debug:
+        msg: "{{ result.usage.prompt_token_count }} input / {{ result.usage.candidates_token_count }} output tokens"
