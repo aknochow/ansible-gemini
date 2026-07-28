@@ -15,6 +15,12 @@ model/vendor fits that stage's difficulty and budget. That's a hypothesis,
 not a measured result yet — no specific cost-savings numbers are claimed
 here until a real usage/pricing comparison has been run.
 
+**Recommended default model: `gemini-3.6-flash`.** It replaced
+`gemini-3.5-flash` on July 21, 2026 at the same input price with a 17%
+output-price cut ($7.50 vs. $9.00 per million output tokens) and a
+slightly better benchmark score — see `examples/model_comparison.yml`
+for a live cost/correctness comparison across the current 3.x lineup.
+
 ## Modules
 
 | Module | Purpose |
@@ -51,7 +57,7 @@ export GOOGLE_CLOUD_LOCATION=us-east5
 ```yaml
 - name: Basic generation
   aknochow.gemini.generate:
-    model: gemini-3.5-flash
+    model: gemini-3.6-flash
     max_output_tokens: 512
     contents: "Summarize this changelog in one sentence: {{ changelog }}"
   register: result
@@ -65,12 +71,12 @@ export GOOGLE_CLOUD_LOCATION=us-east5
     backend: vertex
     project_id: my-gcp-project
     location: us-east5
-    model: gemini-3.5-flash
+    model: gemini-3.6-flash
     max_output_tokens: 512
     contents: "Hello"
 ```
 
-Newer models (e.g. `gemini-3.5-flash`) may only be servable via
+Newer models (e.g. `gemini-3.6-flash`) may only be servable via
 `location: global` on a given project even though `models.list()` shows
 them as available — if you get a `404 NOT_FOUND` on a region you'd expect
 to work, try `global` first.
@@ -81,15 +87,16 @@ other on correctness/tokens/cost (see below).
 
 ### Thinking models and `max_output_tokens`
 
-Thinking-capable models (e.g. `gemini-3.5-flash`) spend part of
-`max_output_tokens` on internal reasoning ("thoughts") that's never
+Thinking-capable models (e.g. `gemini-3.5-flash`, `gemini-3.6-flash`) spend
+part of `max_output_tokens` on internal reasoning ("thoughts") that's never
 returned in `text` — by default, `thinking_budget` is `0`, disabling
 thinking so `max_output_tokens` is a fully deterministic budget for
 visible output only. If you raise `thinking_budget` above 0, budget
 accordingly: a low `max_output_tokens` combined with a nonzero thinking
 budget can burn the whole budget on thinking and return `finish_reason:
-MAX_TOKENS` with truncated or empty `text` (confirmed live against
-`gemini-3.5-flash` during development — see `result.usage.thoughts_token_count`).
+MAX_TOKENS` with truncated or empty `text` (confirmed live against both
+`gemini-3.5-flash` and `gemini-3.6-flash` during development — see
+`result.usage.thoughts_token_count`).
 
 ## Testing
 
@@ -101,11 +108,11 @@ python -m pytest tests/unit/
 ```
 
 Unit tests mock the `google-genai` SDK — no network access or real
-credentials required. Live-verified against Vertex AI (`gemini-3.5-flash`,
-`backend: vertex`, `location: global`) during development, including the
-`thinking_budget` truncation gotcha above. Live verification against the
-direct Gemini API (`backend: api`) and a broader model/quota survey remain
-open follow-up work.
+credentials required. Live-verified against Vertex AI (`gemini-3.6-flash`
+and `gemini-3.5-flash`, `backend: vertex`, `location: global`) during
+development, including the `thinking_budget` truncation gotcha above.
+Live verification against the direct Gemini API (`backend: api`) and a
+broader model/quota survey remain open follow-up work.
 
 ### Live model smoke test
 

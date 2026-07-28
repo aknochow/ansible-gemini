@@ -16,7 +16,7 @@ author:
 options:
   model:
     description:
-      - Model identifier (e.g., V(gemini-3.5-flash), V(gemini-3-pro)).
+      - Model identifier (e.g., V(gemini-3.6-flash), V(gemini-3.1-pro-preview)).
     type: str
     required: true
   contents:
@@ -53,7 +53,7 @@ options:
     elements: str
   thinking_budget:
     description:
-      - Token budget for internal "thinking" on thinking-capable models (e.g. gemini-3.5-flash).
+      - Token budget for internal "thinking" on thinking-capable models (e.g. gemini-3.6-flash).
       - Defaults to V(0) (thinking disabled) so O(max_output_tokens) is a deterministic budget for
         visible output only — on thinking-capable models, a nonzero default would silently consume
         part of O(max_output_tokens) on internal reasoning never returned to the caller, and could
@@ -70,14 +70,14 @@ requirements:
 EXAMPLES = r"""
 - name: Basic generation
   aknochow.gemini.generate:
-    model: gemini-3.5-flash
+    model: gemini-3.6-flash
     max_output_tokens: 512
     contents: "Summarize this changelog in one sentence: {{ changelog }}"
   register: result
 
 - name: Generate with a system instruction
   aknochow.gemini.generate:
-    model: gemini-3.5-flash
+    model: gemini-3.6-flash
     max_output_tokens: 512
     system_instruction: "Answer in a single word."
     contents: "What color is the sky?"
@@ -88,7 +88,7 @@ EXAMPLES = r"""
     backend: vertex
     project_id: my-gcp-project
     location: us-east5
-    model: gemini-3.5-flash
+    model: gemini-3.6-flash
     max_output_tokens: 512
     contents: "Hello"
 """
