@@ -39,11 +39,13 @@ def get_client(module: AnsibleModule):
         module.fail_json(
             msg="The google-genai Python SDK is required. Install it with: pip install google-genai"
         )
+        return
 
     if backend == "api":
         api_key = module.params.get("api_key")
         if not api_key:
             module.fail_json(msg="'api_key' is required when backend=api")
+            return
         return genai.Client(api_key=api_key)
 
     if backend == "vertex":
@@ -53,6 +55,8 @@ def get_client(module: AnsibleModule):
             module.fail_json(
                 msg="'project_id' and 'location' are required when backend=vertex"
             )
+            return
         return genai.Client(vertexai=True, project=project_id, location=location)
 
     module.fail_json(msg=f"Unknown backend: {backend}")
+    return

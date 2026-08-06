@@ -73,6 +73,15 @@ class TestGetClient:
         get_client(module)
         module.fail_json.assert_called_once()
         assert "api_key" in module.fail_json.call_args.kwargs["msg"]
+        # Regression test: get_client() must return immediately after
+        # fail_json() rather than falling through to
+        # genai.Client(api_key=None). A bare MagicMock()'s fail_json()
+        # doesn't raise/exit the way the real AnsibleModule.fail_json()
+        # does, so without an explicit `return` right after the call,
+        # this assertion is what actually catches the fallthrough --
+        # fails on the unfixed code, passes once get_client() returns
+        # early.
+        mock_genai.Client.assert_not_called()
 
     def test_vertex_backend(self, mock_genai):
         from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
@@ -109,6 +118,10 @@ class TestGetClient:
 
         get_client(module)
         module.fail_json.assert_called_once()
+        # Same regression coverage as test_api_backend_requires_api_key
+        # above -- without the fix, this falls through to
+        # genai.Client(vertexai=True, project=None, location=None).
+        mock_genai.Client.assert_not_called()
 
     def test_unknown_backend(self, mock_genai):
         from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
