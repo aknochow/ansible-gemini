@@ -198,7 +198,10 @@ def main():
             contents=module.params["contents"],
             config=types.GenerateContentConfig(**config_kwargs),
         )
-        module.exit_json(changed=True, **flatten_response(response))
+        # A generate_content call never mutates infrastructure state --
+        # it's a query, same as the aknochow.claude message module.
+        # changed is always False here, not conditional on the response.
+        module.exit_json(changed=False, **flatten_response(response))
     except APIError as e:
         module.fail_json(msg=str(e))
 
