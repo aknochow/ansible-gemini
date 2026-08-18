@@ -27,9 +27,9 @@ for a live cost/correctness comparison across the current 3.x lineup.
 |---|---|
 | `generate` | Call `generate_content()` — flattened text/usage return values |
 
-This is a first, deliberately minimal slice: no structured output, tool
-use/function calling, or a batch-equivalent module yet. Those are tracked
-as follow-up work.
+Structured output (`response_schema`/`response_mime_type`) is supported —
+see below. Tool use/function calling and a batch-equivalent module are not
+yet; those are tracked as follow-up work.
 
 ## Requirements
 
@@ -84,6 +84,32 @@ to work, try `global` first.
 See `examples/basic_generate.yml` for a runnable playbook, and
 `examples/model_comparison.yml` to compare Gemini 3.x models against each
 other on correctness/tokens/cost (see below).
+
+### Structured output
+
+```yaml
+- name: Extract structured fields from free text
+  aknochow.gemini.generate:
+    model: gemini-3.6-flash
+    max_output_tokens: 1024
+    contents: "Extract the name and severity from this bug report: {{ bug_text }}"
+    response_schema:
+      type: object
+      properties:
+        name: {type: string}
+        severity: {type: string, enum: [low, medium, high, critical]}
+      required: [name, severity]
+  register: result
+# result.structured.name, result.structured.severity
+```
+
+`response_schema` is a plain JSON Schema dict — the SDK parses the model's
+JSON response against it and returns the parsed value as `result.structured`
+(only present when `response_schema` is set). `response_mime_type` defaults
+to `application/json` automatically once `response_schema` is set; only
+override it if you need `text/plain` for some other reason.
+
+See `examples/structured_output.yml` for a runnable playbook.
 
 ### Thinking models and `max_output_tokens`
 

@@ -61,6 +61,18 @@ options:
         with empty/truncated I(text)). Raise this if you want the model to reason before answering.
     type: int
     default: 0
+  response_schema:
+    description:
+      - 'JSON Schema-style dict describing the required shape of the response, e.g. C({"type": "object", "properties": {...}}).'
+      - When set, the response text is parsed as JSON into the RV(structured) return value.
+      - If O(response_mime_type) is not also set, it defaults to V(application/json).
+    type: dict
+  response_mime_type:
+    description:
+      - Output MIME type of the generated candidate text.
+      - Required to be V(application/json) for O(response_schema) to take effect.
+    type: str
+    choices: [text/plain, application/json]
 extends_documentation_fragment:
   - aknochow.gemini.auth
 requirements:
@@ -82,6 +94,23 @@ EXAMPLES = r"""
     system_instruction: "Answer in a single word."
     contents: "What color is the sky?"
   register: result
+
+- name: Structured extraction with response_schema
+  aknochow.gemini.generate:
+    model: gemini-3.6-flash
+    max_output_tokens: 1024
+    contents: "Extract the name and severity from this bug report: {{ bug_text }}"
+    response_schema:
+      type: object
+      properties:
+        name: {type: string}
+        severity: {type: string, enum: [low, medium, high, critical]}
+      required: [name, severity]
+  register: result
+
+- name: Use structured result directly
+  ansible.builtin.debug:
+    msg: "{{ result.structured.name }} is {{ result.structured.severity }}"
 
 - name: Call via Vertex AI
   aknochow.gemini.generate:
@@ -106,6 +135,10 @@ finish_reason:
   description: Why generation stopped.
   type: str
   returned: always
+structured:
+  description: Parsed JSON value when O(response_schema) requested structured output.
+  type: raw
+  returned: when response_schema is set
 usage:
   description: Token usage for the request.
   type: dict
@@ -156,6 +189,13 @@ def flatten_response(response):
         if usage
         else None,
     )
+    # The SDK itself only populates .parsed when response_schema was passed
+    # in the request config, so this naturally matches the RETURN doc's
+    # "returned: when response_schema is set" -- no extra request-side flag
+    # needed to gate it (unlike aknochow.claude's message.py, whose SDK has
+    # no equivalent and must re-parse text manually behind an explicit gate).
+    if response.parsed is not None:
+        result["structured"] = response.parsed
     return result
 
 
@@ -170,6 +210,8 @@ def main():
         top_k=dict(type="int"),
         stop_sequences=dict(type="list", elements="str"),
         thinking_budget=dict(type="int", default=0),
+        response_schema=dict(type="dict"),
+        response_mime_type=dict(type="str", choices=["text/plain", "application/json"]),
     )
     argument_spec.update(PROVIDER_ARGSPEC)
 
@@ -187,10 +229,16 @@ def main():
         max_output_tokens=module.params["max_output_tokens"],
         thinking_config=types.ThinkingConfig(thinking_budget=module.params["thinking_budget"]),
     )
-    for key in ("system_instruction", "temperature", "top_p", "top_k", "stop_sequences"):
+    for key in ("system_instruction", "temperature", "top_p", "top_k", "stop_sequences", "response_schema", "response_mime_type"):
         value = module.params.get(key)
         if value is not None:
             config_kwargs[key] = value
+
+    # response_schema requires a compatible response_mime_type; default it
+    # to application/json rather than making every schema-only caller repeat
+    # a second parameter the SDK can only meaningfully be application/json.
+    if module.params.get("response_schema") is not None and "response_mime_type" not in config_kwargs:
+        config_kwargs["response_mime_type"] = "application/json"
 
     try:
         response = client.models.generate_content(
