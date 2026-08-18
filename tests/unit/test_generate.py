@@ -118,3 +118,38 @@ class TestFlattenResponse:
         result = flatten_response(response)
 
         assert result["response"] == {"model_version": "gemini-3.5-flash"}
+
+
+class TestMainReportsChanged:
+    def test_main_reports_changed_false(self, mock_genai, monkeypatch):
+        from ansible_collections.aknochow.gemini.plugins.modules import generate as generate_module
+
+        fake_module = MagicMock()
+        fake_module.params = {
+            "model": "gemini-3.6-flash",
+            "contents": "hi",
+            "max_output_tokens": 100,
+            "system_instruction": None,
+            "temperature": None,
+            "top_p": None,
+            "top_k": None,
+            "stop_sequences": None,
+            "thinking_budget": 0,
+            "backend": "api",
+            "api_key": "test-key",
+            "project_id": None,
+            "location": None,
+        }
+        mock_genai.Client.return_value.models.generate_content.return_value = make_response(
+            [make_candidate([make_part("hi")])]
+        )
+        monkeypatch.setattr(generate_module, "AnsibleModule", lambda **kwargs: fake_module)
+
+        generate_module.main()
+
+        fake_module.exit_json.assert_called_once()
+        # Regression check: a query call never mutates infrastructure
+        # state, so this must always be False -- not just "whatever the
+        # response happened to produce". Fails against the pre-fix
+        # hardcoded changed=True.
+        assert fake_module.exit_json.call_args.kwargs["changed"] is False
