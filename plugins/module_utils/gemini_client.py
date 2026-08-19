@@ -45,7 +45,9 @@ def get_client(module: AnsibleModule):
         )
         return
 
-    timeout = module.params.get("timeout") or 120.0
+    timeout = module.params.get("timeout")
+    if timeout is None:
+        timeout = 120.0
     max_retries = module.params.get("max_retries")
     if max_retries is None:
         max_retries = 2

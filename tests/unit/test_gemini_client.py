@@ -151,6 +151,29 @@ class TestHttpOptions:
         # max_retries (retries only) -- default max_retries=2 -> 3 total.
         assert mock_genai.types.HttpRetryOptions.call_args.kwargs["attempts"] == 3
 
+    def test_explicit_zero_timeout_is_not_overridden_by_default(self, mock_genai):
+        # Regression check: `or 120.0` would silently replace an
+        # intentional timeout=0 with the default, since 0 is falsy but a
+        # real, distinct value from "unset". Must use an explicit None
+        # check instead, same as max_retries already does.
+        from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
+            get_client,
+        )
+
+        module = MagicMock()
+        module.params = {
+            "backend": "api",
+            "api_key": "test-key",
+            "project_id": None,
+            "location": None,
+            "timeout": 0,
+            "max_retries": None,
+        }
+
+        get_client(module)
+
+        assert mock_genai.types.HttpOptions.call_args.kwargs["timeout"] == 0
+
     def test_custom_timeout_and_max_retries_are_converted(self, mock_genai):
         from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
             get_client,
