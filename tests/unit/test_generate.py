@@ -37,9 +37,9 @@ def make_part(text=None, function_call=None):
     return part
 
 
-def make_function_call(id="call_1", name="get_weather", args=None):
+def make_function_call(call_id="call_1", name="get_weather", args=None):
     function_call = MagicMock()
-    function_call.id = id
+    function_call.id = call_id
     function_call.name = name
     function_call.args = args if args is not None else {"location": "Boston"}
     return function_call
@@ -192,7 +192,9 @@ class TestFlattenResponse:
             flatten_response,
         )
 
-        function_call = make_function_call(id="call_1", name="get_weather", args={"location": "Boston"})
+        function_call = make_function_call(
+            call_id="call_1", name="get_weather", args={"location": "Boston"}
+        )
         response = make_response([make_candidate([make_part(function_call=function_call)])])
         result = flatten_response(response)
 
