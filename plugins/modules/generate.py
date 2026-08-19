@@ -83,6 +83,10 @@ options:
     description:
       - 'Tool-calling behavior, matching the SDK''s own C(ToolConfig) shape directly, e.g. C({"function_calling_config": {"mode": "ANY", "allowed_function_names": [...]}}).'
     type: dict
+  labels:
+    description:
+      - 'User-defined string-to-string metadata to break down billed charges by, e.g. C({"team": "platform", "pipeline": "review"}).'
+    type: dict
 extends_documentation_fragment:
   - aknochow.gemini.auth
 requirements:
@@ -258,6 +262,7 @@ def main():
         response_mime_type=dict(type="str", choices=["text/plain", "application/json"]),
         tools=dict(type="list", elements="dict"),
         tool_config=dict(type="dict"),
+        labels=dict(type="dict"),
     )
     argument_spec.update(PROVIDER_ARGSPEC)
 
@@ -285,6 +290,7 @@ def main():
         "response_mime_type",
         "tools",
         "tool_config",
+        "labels",
     )
     for key in optional_keys:
         value = module.params.get(key)

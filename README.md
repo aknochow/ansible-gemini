@@ -54,6 +54,11 @@ export GOOGLE_CLOUD_PROJECT=my-gcp-project
 export GOOGLE_CLOUD_LOCATION=us-east5
 ```
 
+Every module also accepts `timeout` (seconds, default `120.0`) and
+`max_retries` (default `2`, meaning 2 retries after the first attempt —
+translated internally to the SDK's own `HttpRetryOptions.attempts`, which
+counts the original request too) for tuning request timeouts/retries.
+
 ### `generate` — basic call
 
 ```yaml
