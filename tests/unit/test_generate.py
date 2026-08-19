@@ -221,9 +221,9 @@ class TestFlattenResponse:
         )
 
         function_call = make_function_call()
-        response = make_response(
-            [make_candidate([make_part("Let me check that."), make_part(function_call=function_call)])]
-        )
+        text_part = make_part("Let me check that.")
+        call_part = make_part(function_call=function_call)
+        response = make_response([make_candidate([text_part, call_part])])
         result = flatten_response(response)
 
         assert result["text"] == "Let me check that."
