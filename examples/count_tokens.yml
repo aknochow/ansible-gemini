@@ -1,0 +1,29 @@
+---
+- name: aknochow.gemini.count_tokens example
+  hosts: localhost
+  gather_facts: false
+  vars:
+    large_prompt: "Summarize the plot of a very long novel in one paragraph."
+  tasks:
+    - name: Estimate input tokens before generating
+      aknochow.gemini.count_tokens:
+        model: gemini-3.6-flash
+        contents: "{{ large_prompt }}"
+      register: estimate
+
+    - name: Show the estimate
+      ansible.builtin.debug:
+        msg: "This prompt would cost {{ estimate.total_tokens }} input tokens"
+
+    - name: Only generate if under budget
+      aknochow.gemini.generate:
+        model: gemini-3.6-flash
+        max_output_tokens: 256
+        contents: "{{ large_prompt }}"
+      register: result
+      when: estimate.total_tokens < 50000
+
+    - name: Show the response
+      ansible.builtin.debug:
+        msg: "{{ result.text }}"
+      when: result is not skipped

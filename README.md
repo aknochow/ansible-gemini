@@ -26,10 +26,12 @@ for a live cost/correctness comparison across the current 3.x lineup.
 | Module | Purpose |
 |---|---|
 | `generate` | Call `generate_content()` — flattened text/usage return values |
+| `count_tokens` | Pre-flight input-token estimate for a would-be `generate` call |
+| `batch` | Submit, poll, or cancel a bulk asynchronous batch of `generate_content` requests |
 
-Structured output (`response_schema`/`response_mime_type`) and function
-calling (`tools`/`tool_config`) are supported — see below. A
-batch-equivalent module is not yet; that's tracked as follow-up work.
+Structured output (`response_schema`/`response_mime_type`), function
+calling (`tools`/`tool_config`), token counting, and batch requests are
+all supported — see below.
 
 ## Requirements
 
@@ -145,6 +147,62 @@ function's result back via `contents` on a follow-up call the same way
 you'd construct any other multi-turn `contents` list.
 
 See `examples/function_calling.yml` for a runnable playbook.
+
+### Token counting
+
+```yaml
+- name: Estimate input tokens before generating
+  aknochow.gemini.count_tokens:
+    model: gemini-3.6-flash
+    contents: "{{ large_prompt }}"
+  register: estimate
+
+- name: Skip the call if the prompt is too large
+  aknochow.gemini.generate:
+    model: gemini-3.6-flash
+    max_output_tokens: 1024
+    contents: "{{ large_prompt }}"
+  when: estimate.total_tokens < 50000
+```
+
+`count_tokens` accepts the same `contents`/`system_instruction`/`tools` shape
+as `generate` so the estimate reflects what the real call would actually
+send. See `examples/count_tokens.yml` for a runnable playbook.
+
+### Batch requests
+
+```yaml
+- name: Submit a batch of requests
+  aknochow.gemini.batch:
+    model: gemini-3.6-flash
+    requests:
+      - contents: "Summarize {{ file1_content }}"
+        metadata: {source: file-1}
+      - contents: "Summarize {{ file2_content }}"
+        metadata: {source: file-2}
+  register: batch
+
+- name: Wait for it to finish
+  aknochow.gemini.batch:
+    name: "{{ batch.name }}"
+    wait: true
+    wait_timeout: 1800
+  register: finished
+# finished.results -> [{metadata, text, response, error}, ...], same order as requests
+
+- name: Cancel a batch
+  aknochow.gemini.batch:
+    name: "{{ batch.name }}"
+    state: absent
+```
+
+`requests` items match the SDK's own inline-request shape directly (no
+reshaping) — each needs `contents`, and may optionally override `model`,
+supply a `config` dict, or attach a `metadata` dict that's echoed back on
+the matching result (Gemini's batch API has no `custom_id` concept, so
+`metadata` plus result ordering — guaranteed to match request order — is
+the correlation mechanism). See `examples/batch.yml` for a runnable
+playbook.
 
 ### Thinking models and `max_output_tokens`
 

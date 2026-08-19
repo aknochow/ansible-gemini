@@ -2,29 +2,7 @@
 
 from __future__ import annotations
 
-import sys
 from unittest.mock import MagicMock
-
-import pytest
-
-
-@pytest.fixture(autouse=True)
-def mock_genai():
-    mock_google = MagicMock()
-    mock_genai_module = MagicMock()
-    mock_genai_module.Client = MagicMock()
-    mock_google.genai = mock_genai_module
-    sys.modules["google"] = mock_google
-    sys.modules["google.genai"] = mock_genai_module
-    sys.modules["google.genai.types"] = MagicMock()
-    mock_errors = MagicMock()
-    mock_errors.APIError = type("APIError", (Exception,), {})
-    sys.modules["google.genai.errors"] = mock_errors
-    yield mock_genai_module
-    sys.modules.pop("google.genai.errors", None)
-    sys.modules.pop("google.genai.types", None)
-    sys.modules.pop("google.genai", None)
-    sys.modules.pop("google", None)
 
 
 def make_part(text=None, function_call=None):
