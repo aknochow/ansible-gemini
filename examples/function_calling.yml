@@ -1,0 +1,28 @@
+---
+- name: aknochow.gemini.generate function calling example
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Ask a question that requires calling get_weather
+      aknochow.gemini.generate:
+        model: gemini-3.6-flash
+        max_output_tokens: 512
+        contents: "What's the weather in Boston?"
+        tools:
+          - function_declarations:
+              - name: get_weather
+                description: Get the current weather for a location
+                parameters:
+                  type: object
+                  properties:
+                    location: {type: string}
+                  required: [location]
+        tool_config:
+          function_calling_config:
+            mode: ANY
+      register: result
+
+    - name: Show the model's function call(s)
+      ansible.builtin.debug:
+        msg: "Model wants to call {{ item.name }} with {{ item.args }}"
+      loop: "{{ result.tool_calls }}"
