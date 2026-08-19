@@ -56,6 +56,8 @@ DEFAULT_MODULE_PARAMS = {
     "api_key": "test-key",
     "project_id": None,
     "location": None,
+    "timeout": None,
+    "max_retries": None,
 }
 
 

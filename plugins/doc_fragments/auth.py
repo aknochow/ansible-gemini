@@ -32,4 +32,14 @@ options:
       - Required when O(backend=vertex).
       - If the value is not specified, the value of the E(GOOGLE_CLOUD_LOCATION) environment variable will be used.
     type: str
+  timeout:
+    description:
+      - Per-request timeout in seconds.
+    type: float
+    default: 120.0
+  max_retries:
+    description:
+      - Maximum number of automatic retries the SDK performs on transient errors.
+    type: int
+    default: 2
 """

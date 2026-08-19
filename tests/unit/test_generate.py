@@ -39,10 +39,13 @@ DEFAULT_MODULE_PARAMS = {
     "response_mime_type": None,
     "tools": None,
     "tool_config": None,
+    "labels": None,
     "backend": "api",
     "api_key": "test-key",
     "project_id": None,
     "location": None,
+    "timeout": None,
+    "max_retries": None,
 }
 
 
@@ -300,3 +303,16 @@ class TestMainToolsConfig:
 
         assert "tools" not in config_kwargs
         assert "tool_config" not in config_kwargs
+
+
+class TestMainLabels:
+    def test_labels_passed_through(self, mock_genai, monkeypatch):
+        labels = {"team": "platform", "pipeline": "review"}
+        config_kwargs = run_main_and_get_config_kwargs(mock_genai, monkeypatch, {"labels": labels})
+
+        assert config_kwargs["labels"] == labels
+
+    def test_no_labels_key_when_not_requested(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(mock_genai, monkeypatch, {})
+
+        assert "labels" not in config_kwargs
