@@ -9,7 +9,7 @@ module: batch
 short_description: Submit, poll, or cancel a Gemini batch job
 description:
   - Wraps the google-genai Batches API (C(client.batches)) for bulk asynchronous C(generate_content) requests.
-version_added: "0.2.0"
+version_added: "0.1.0"
 author:
   - Adam Knochowski (@aknochow)
 options:

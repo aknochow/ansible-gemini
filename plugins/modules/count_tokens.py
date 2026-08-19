@@ -10,7 +10,7 @@ short_description: Count input tokens for a Gemini request without generating
 description:
   - Calls C(client.models.count_tokens()) directly via the official google-genai Python SDK.
   - Useful as a pre-flight budget check before an expensive M(aknochow.gemini.generate) call.
-version_added: "0.2.0"
+version_added: "0.1.0"
 author:
   - Adam Knochowski (@aknochow)
 options:

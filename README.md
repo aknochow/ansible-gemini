@@ -30,7 +30,7 @@ for a live cost/correctness comparison across the current 3.x lineup.
 | `batch` | Submit, poll, or cancel a bulk asynchronous batch of `generate_content` requests |
 
 Structured output (`response_schema`/`response_mime_type`) is supported —
-see below. Tool use/function calling is not yet; tracked as follow-up work.
+see below. Tool use/function calling is not yet supported; tracked as follow-up work.
 
 ## Requirements
 
