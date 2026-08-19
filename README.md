@@ -27,9 +27,9 @@ for a live cost/correctness comparison across the current 3.x lineup.
 |---|---|
 | `generate` | Call `generate_content()` — flattened text/usage return values |
 
-Structured output (`response_schema`/`response_mime_type`) is supported —
-see below. Tool use/function calling and a batch-equivalent module are not
-yet; those are tracked as follow-up work.
+Structured output (`response_schema`/`response_mime_type`) and function
+calling (`tools`/`tool_config`) are supported — see below. A
+batch-equivalent module is not yet; that's tracked as follow-up work.
 
 ## Requirements
 
@@ -110,6 +110,41 @@ to `application/json` automatically once `response_schema` is set; only
 override it if you need `text/plain` for some other reason.
 
 See `examples/structured_output.yml` for a runnable playbook.
+
+### Function calling
+
+```yaml
+- name: Ask a question that requires calling get_weather
+  aknochow.gemini.generate:
+    model: gemini-3.6-flash
+    max_output_tokens: 512
+    contents: "What's the weather in Boston?"
+    tools:
+      - function_declarations:
+          - name: get_weather
+            description: Get the current weather for a location
+            parameters:
+              type: object
+              properties:
+                location: {type: string}
+              required: [location]
+    tool_config:
+      function_calling_config:
+        mode: ANY
+  register: result
+# result.tool_calls -> [{id, name, args}, ...]
+```
+
+`tools` and `tool_config` are passed straight through to the SDK's own
+`Tool`/`ToolConfig` shapes — no reshaping, so anything the SDK itself
+accepts there (including built-in tools like `google_search` or
+`code_execution`) works too. Function calls the model makes come back as
+`result.tool_calls`, each with `id`, `name`, and `args` (a dict) — this
+module doesn't manage multi-turn conversation state itself; feed a
+function's result back via `contents` on a follow-up call the same way
+you'd construct any other multi-turn `contents` list.
+
+See `examples/function_calling.yml` for a runnable playbook.
 
 ### Thinking models and `max_output_tokens`
 

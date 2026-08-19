@@ -73,6 +73,16 @@ options:
       - Required to be V(application/json) for O(response_schema) to take effect.
     type: str
     choices: [text/plain, application/json]
+  tools:
+    description:
+      - 'List of tool dicts, matching the SDK''s own C(Tool) shape directly, e.g. C({"function_declarations": [{"name": ..., "description": ..., "parameters": {...}}]}).'
+      - Function calls the model makes are returned in the RV(tool_calls) return value.
+    type: list
+    elements: dict
+  tool_config:
+    description:
+      - 'Tool-calling behavior, matching the SDK''s own C(ToolConfig) shape directly, e.g. C({"function_calling_config": {"mode": "ANY", "allowed_function_names": [...]}}).'
+    type: dict
 extends_documentation_fragment:
   - aknochow.gemini.auth
 requirements:
@@ -112,6 +122,30 @@ EXAMPLES = r"""
   ansible.builtin.debug:
     msg: "{{ result.structured.name }} is {{ result.structured.severity }}"
 
+- name: Function calling with tools/tool_config
+  aknochow.gemini.generate:
+    model: gemini-3.6-flash
+    max_output_tokens: 512
+    contents: "What's the weather in Boston?"
+    tools:
+      - function_declarations:
+          - name: get_weather
+            description: Get the current weather for a location
+            parameters:
+              type: object
+              properties:
+                location: {type: string}
+              required: [location]
+    tool_config:
+      function_calling_config:
+        mode: ANY
+  register: result
+
+- name: Act on the model's function call
+  ansible.builtin.debug:
+    msg: "Model wants to call {{ item.name }} with {{ item.args }}"
+  loop: "{{ result.tool_calls }}"
+
 - name: Call via Vertex AI
   aknochow.gemini.generate:
     backend: vertex
@@ -134,6 +168,10 @@ text:
 finish_reason:
   description: Why generation stopped.
   type: str
+  returned: always
+tool_calls:
+  description: List of function calls the model made, each with C(id), C(name), and C(args).
+  type: list
   returned: always
 structured:
   description: Parsed JSON value when O(response_schema) requested structured output.
@@ -173,12 +211,18 @@ def flatten_response(response):
     candidate = response.candidates[0] if response.candidates else None
     parts = candidate.content.parts if candidate and candidate.content else []
     text = "".join(part.text for part in parts if part.text)
+    tool_calls = [
+        dict(id=part.function_call.id, name=part.function_call.name, args=part.function_call.args)
+        for part in parts
+        if part.function_call
+    ]
 
     usage = response.usage_metadata
     result = dict(
         response=response.model_dump(mode="json"),
         text=text,
         finish_reason=str(candidate.finish_reason) if candidate and candidate.finish_reason else None,
+        tool_calls=tool_calls,
         usage=dict(
             prompt_token_count=usage.prompt_token_count,
             candidates_token_count=usage.candidates_token_count,
@@ -212,6 +256,8 @@ def main():
         thinking_budget=dict(type="int", default=0),
         response_schema=dict(type="dict"),
         response_mime_type=dict(type="str", choices=["text/plain", "application/json"]),
+        tools=dict(type="list", elements="dict"),
+        tool_config=dict(type="dict"),
     )
     argument_spec.update(PROVIDER_ARGSPEC)
 
@@ -237,6 +283,8 @@ def main():
         "stop_sequences",
         "response_schema",
         "response_mime_type",
+        "tools",
+        "tool_config",
     )
     for key in optional_keys:
         value = module.params.get(key)
