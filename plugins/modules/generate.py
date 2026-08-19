@@ -229,7 +229,16 @@ def main():
         max_output_tokens=module.params["max_output_tokens"],
         thinking_config=types.ThinkingConfig(thinking_budget=module.params["thinking_budget"]),
     )
-    for key in ("system_instruction", "temperature", "top_p", "top_k", "stop_sequences", "response_schema", "response_mime_type"):
+    optional_keys = (
+        "system_instruction",
+        "temperature",
+        "top_p",
+        "top_k",
+        "stop_sequences",
+        "response_schema",
+        "response_mime_type",
+    )
+    for key in optional_keys:
         value = module.params.get(key)
         if value is not None:
             config_kwargs[key] = value
