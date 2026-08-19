@@ -7,6 +7,9 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
 
 _project_root = Path(__file__).resolve().parents[2]  # ansible-gemini/
 
@@ -32,3 +35,22 @@ def _create_namespace_shim(prefix: str, collection_name: str, project_root: Path
 _namespace_root = _create_namespace_shim("ansible_gemini_test_", "gemini", _project_root)
 
 sys.path.insert(0, str(_namespace_root))
+
+
+@pytest.fixture(autouse=True)
+def mock_genai():
+    mock_google = MagicMock()
+    mock_genai_module = MagicMock()
+    mock_genai_module.Client = MagicMock()
+    mock_google.genai = mock_genai_module
+    sys.modules["google"] = mock_google
+    sys.modules["google.genai"] = mock_genai_module
+    sys.modules["google.genai.types"] = MagicMock()
+    mock_errors = MagicMock()
+    mock_errors.APIError = type("APIError", (Exception,), {})
+    sys.modules["google.genai.errors"] = mock_errors
+    yield mock_genai_module
+    sys.modules.pop("google.genai.errors", None)
+    sys.modules.pop("google.genai.types", None)
+    sys.modules.pop("google.genai", None)
+    sys.modules.pop("google", None)
