@@ -347,3 +347,54 @@ class TestMainThinkingConfig:
         mock_genai.types.ThinkingConfig.assert_called_with(thinking_budget=512, thinking_level="medium")
         assert "thinking_config" in config_kwargs
 
+    # --- backend split: the Developer API (backend=api) rejects an explicit
+    # ThinkingConfig(thinking_budget=0) with 400 INVALID_ARGUMENT, so budget=0
+    # must omit thinking_config there. Vertex AI has no such restriction and
+    # DOES honor an explicit thinking_budget=0 to disable thinking, so it must
+    # be sent unconditionally on that backend to preserve the documented
+    # deterministic-output-budget guarantee. See generate.py's DOCUMENTATION
+    # for thinking_budget and .agents/rules/development.md.
+
+    def test_api_backend_omits_thinking_config_when_budget_zero(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai, monkeypatch, {"backend": "api", "thinking_budget": 0, "thinking_level": None}
+        )
+        assert "thinking_config" not in config_kwargs
+
+    def test_vertex_backend_sends_explicit_zero_budget(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai,
+            monkeypatch,
+            {
+                "backend": "vertex",
+                "thinking_budget": 0,
+                "thinking_level": None,
+                "project_id": "test-project",
+                "location": "us-central1",
+            },
+        )
+        mock_genai.types.ThinkingConfig.assert_called_with(thinking_budget=0)
+        assert "thinking_config" in config_kwargs
+
+    def test_vertex_backend_sends_budget_and_level_together(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai,
+            monkeypatch,
+            {
+                "backend": "vertex",
+                "thinking_budget": 0,
+                "thinking_level": "low",
+                "project_id": "test-project",
+                "location": "us-central1",
+            },
+        )
+        mock_genai.types.ThinkingConfig.assert_called_with(thinking_budget=0, thinking_level="low")
+        assert "thinking_config" in config_kwargs
+
+    def test_api_backend_still_sends_nonzero_budget(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai, monkeypatch, {"backend": "api", "thinking_budget": 256, "thinking_level": None}
+        )
+        mock_genai.types.ThinkingConfig.assert_called_with(thinking_budget=256)
+        assert "thinking_config" in config_kwargs
+
