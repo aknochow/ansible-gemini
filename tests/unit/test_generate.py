@@ -35,6 +35,7 @@ DEFAULT_MODULE_PARAMS = {
     "top_k": None,
     "stop_sequences": None,
     "thinking_budget": 0,
+    "thinking_level": None,
     "response_schema": None,
     "response_mime_type": None,
     "tools": None,
@@ -316,3 +317,33 @@ class TestMainLabels:
         config_kwargs = run_main_and_get_config_kwargs(mock_genai, monkeypatch, {})
 
         assert "labels" not in config_kwargs
+
+
+class TestMainThinkingConfig:
+    def test_no_thinking_config_when_budget_zero_and_level_none(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai, monkeypatch, {"thinking_budget": 0, "thinking_level": None}
+        )
+        assert "thinking_config" not in config_kwargs
+
+    def test_thinking_budget_passed_when_greater_than_zero(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai, monkeypatch, {"thinking_budget": 1024}
+        )
+        mock_genai.types.ThinkingConfig.assert_called_with(thinking_budget=1024)
+        assert "thinking_config" in config_kwargs
+
+    def test_thinking_level_passed_when_specified(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai, monkeypatch, {"thinking_level": "high"}
+        )
+        mock_genai.types.ThinkingConfig.assert_called_with(thinking_level="high")
+        assert "thinking_config" in config_kwargs
+
+    def test_both_thinking_budget_and_level_passed(self, mock_genai, monkeypatch):
+        config_kwargs = run_main_and_get_config_kwargs(
+            mock_genai, monkeypatch, {"thinking_budget": 512, "thinking_level": "medium"}
+        )
+        mock_genai.types.ThinkingConfig.assert_called_with(thinking_budget=512, thinking_level="medium")
+        assert "thinking_config" in config_kwargs
+

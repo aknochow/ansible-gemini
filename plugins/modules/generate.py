@@ -53,7 +53,7 @@ options:
     elements: str
   thinking_budget:
     description:
-      - Token budget for internal "thinking" on thinking-capable models (e.g. gemini-3.6-flash).
+      - Token budget for internal "thinking" on thinking-capable models (e.g. gemini-3.6-flash, gemini-3.7-flash).
       - Defaults to V(0) (thinking disabled) so O(max_output_tokens) is a deterministic budget for
         visible output only — on thinking-capable models, a nonzero default would silently consume
         part of O(max_output_tokens) on internal reasoning never returned to the caller, and could
@@ -61,6 +61,14 @@ options:
         with empty/truncated I(text)). Raise this if you want the model to reason before answering.
     type: int
     default: 0
+  thinking_level:
+    description:
+      - Reasoning effort level on thinking-capable models (e.g. gemini-3.7-flash).
+      - Choices are V(minimal), V(low), V(medium), or V(high).
+      - Can be combined with or used instead of O(thinking_budget).
+    type: str
+    choices: [minimal, low, medium, high]
+    aliases: [effort, effort_level]
   response_schema:
     description:
       - 'JSON Schema-style dict describing the required shape of the response, e.g. C({"type": "object", "properties": {...}}).'
@@ -258,6 +266,11 @@ def main():
         top_k=dict(type="int"),
         stop_sequences=dict(type="list", elements="str"),
         thinking_budget=dict(type="int", default=0),
+        thinking_level=dict(
+            type="str",
+            choices=["minimal", "low", "medium", "high"],
+            aliases=["effort", "effort_level"],
+        ),
         response_schema=dict(type="dict"),
         response_mime_type=dict(type="str", choices=["text/plain", "application/json"]),
         tools=dict(type="list", elements="dict"),
@@ -278,8 +291,14 @@ def main():
 
     config_kwargs = dict(
         max_output_tokens=module.params["max_output_tokens"],
-        thinking_config=types.ThinkingConfig(thinking_budget=module.params["thinking_budget"]),
     )
+    thinking_kwargs = {}
+    if module.params["thinking_budget"] > 0:
+        thinking_kwargs["thinking_budget"] = module.params["thinking_budget"]
+    if module.params.get("thinking_level"):
+        thinking_kwargs["thinking_level"] = module.params["thinking_level"]
+    if thinking_kwargs:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(**thinking_kwargs)
     optional_keys = (
         "system_instruction",
         "temperature",

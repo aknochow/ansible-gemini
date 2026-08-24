@@ -15,11 +15,19 @@ model/vendor fits that stage's difficulty and budget. That's a hypothesis,
 not a measured result yet — no specific cost-savings numbers are claimed
 here until a real usage/pricing comparison has been run.
 
-**Recommended default model: `gemini-3.6-flash`.** It replaced
-`gemini-3.5-flash` on July 21, 2026 at the same input price with a 17%
-output-price cut ($7.50 vs. $9.00 per million output tokens) and a
-slightly better benchmark score — see `examples/model_comparison.yml`
-for a live cost/correctness comparison across the current 3.x lineup.
+**Recommended default model: `gemini-3.7-flash` (as of August 2026).**
+It features hybrid reasoning with configurable effort levels (`minimal`, `low`, `medium`, `high`)
+via the `effort` / `thinking_level` parameter or `thinking_budget`.
+
+### Available Models (August 2026)
+
+| Model Tier | Model Identifier | Description | Supported Effort Levels |
+|---|---|---|---|
+| **Flagship Flash** | `gemini-3.7-flash` | Latest multi-modal, hybrid-reasoning model (default) | `minimal`, `low`, `medium`, `high` (or `thinking_budget`) |
+| **High Efficiency** | `gemini-3.6-flash` | Fast, cost-efficient 3.x production model | `thinking_budget` |
+| **Previous Gen Flash** | `gemini-3.5-flash`, `gemini-3.5-flash-lite` | Established 3.5 series | `thinking_budget` |
+| **Previews** | `gemini-3-flash-preview` | Preview variant | `thinking_budget` |
+| **General Purpose 2.x** | `gemini-2.5-flash`, `gemini-2.5-pro` | 2.5 series general production models | Standard generation |
 
 ## Modules
 
@@ -209,18 +217,37 @@ the matching result (Gemini's batch API has no `custom_id` concept, so
 the correlation mechanism). See `examples/batch.yml` for a runnable
 playbook.
 
-### Thinking models and `max_output_tokens`
+### Thinking models, effort levels, and `max_output_tokens`
 
-Thinking-capable models (e.g. `gemini-3.5-flash`, `gemini-3.6-flash`) spend
+Thinking-capable models (e.g. `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`) spend
 part of `max_output_tokens` on internal reasoning ("thoughts") that's never
-returned in `text` — by default, `thinking_budget` is `0`, disabling
-thinking so `max_output_tokens` is a fully deterministic budget for
-visible output only. If you raise `thinking_budget` above 0, budget
-accordingly: a low `max_output_tokens` combined with a nonzero thinking
-budget can burn the whole budget on thinking and return `finish_reason:
-MAX_TOKENS` with truncated or empty `text` (confirmed live against both
-`gemini-3.5-flash` and `gemini-3.6-flash` during development — see
-`result.usage.thoughts_token_count`).
+returned in `text`. By default, thinking is disabled (`thinking_budget: 0` and `effort` unset)
+so `max_output_tokens` is a fully deterministic budget for visible output only.
+
+You can configure reasoning effort using either **`effort`** (alias: `thinking_level`) or **`thinking_budget`**:
+
+| Effort Level | SDK Value | Behavior & Latency | Best Suited For |
+|---|---|---|---|
+| **`minimal`** | `MINIMAL` | Bare minimum reasoning (near-zero thought tokens); emits output immediately. | High-throughput batch processing, JSON extraction, single-step tasks. |
+| **`low`** | `LOW` | Lightweight reasoning check before responding; low latency. | Quick bug fixes, single-shot Ansible tasks, simple syntax/contract checks. |
+| **`medium`** | `MEDIUM` | Balanced reasoning; analyzes invariants and outlines steps before generating. | Standard multi-file coding, writing test suites with edge cases, refactoring. |
+| **`high`** | `HIGH` | Deep extended reasoning; actively explores edge cases, race conditions, and designs. | Architectural planning, complex pipeline orchestration, hard debugging. |
+
+#### Example: Setting Effort in Playbooks
+
+```yaml
+- name: Architect role with high effort
+  aknochow.gemini.generate:
+    model: gemini-3.7-flash
+    max_output_tokens: 4096
+    effort: high
+    contents: "Design a high-availability Postgres deployment for Ansible Automation Platform"
+```
+
+> [!IMPORTANT]
+> When enabling `effort` or raising `thinking_budget`, budget `max_output_tokens` accordingly: a low
+> `max_output_tokens` combined with high effort can exhaust the budget on internal thoughts and return
+> `finish_reason: MAX_TOKENS` with empty or truncated `text` (see `result.usage.thoughts_token_count`).
 
 ## Testing
 
