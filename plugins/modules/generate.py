@@ -53,14 +53,35 @@ options:
     elements: str
   thinking_budget:
     description:
-      - Token budget for internal "thinking" on thinking-capable models (e.g. gemini-3.6-flash).
-      - Defaults to V(0) (thinking disabled) so O(max_output_tokens) is a deterministic budget for
-        visible output only — on thinking-capable models, a nonzero default would silently consume
-        part of O(max_output_tokens) on internal reasoning never returned to the caller, and could
-        exhaust the whole budget before any visible text is generated (I(finish_reason)=C(MAX_TOKENS)
-        with empty/truncated I(text)). Raise this if you want the model to reason before answering.
+      - Token budget for internal "thinking" on thinking-capable models (e.g. gemini-3.6-flash, gemini-3.7-flash).
+      - Defaults to V(0), meaning "thinking disabled" so O(max_output_tokens) is a deterministic
+        budget for visible output only — on thinking-capable models, a nonzero default would
+        silently consume part of O(max_output_tokens) on internal reasoning never returned to the
+        caller, and could exhaust the whole budget before any visible text is generated
+        (I(finish_reason)=C(MAX_TOKENS) with empty/truncated I(text)). Raise this if you want the
+        model to reason before answering.
+      - This determinism guarantee only holds on O(backend)=V(vertex), where an explicit
+        C(ThinkingConfig(thinking_budget=0)) is sent and genuinely disables thinking. On
+        O(backend)=V(api) (the Gemini Developer API), the same explicit C(thinking_budget=0) is
+        REJECTED by the API with C(400 INVALID_ARGUMENT), so a budget of V(0) on that backend sends
+        no C(thinking_config) at all and the model's own default thinking behavior applies instead.
+        That default has been observed ON for at least one thinking-capable model
+        (C(gemini-3.6-flash) returned a nonzero I(thoughts_token_count) with no C(thinking_config)
+        sent, verified live against the Developer API on 2026-08-24). On O(backend)=V(api) the
+        V(0) default therefore does NOT guarantee thinking is disabled and O(max_output_tokens) may
+        still be partly consumed by unreturned thinking tokens; callers who need a strict
+        visible-output-only budget on that backend should account for this, or use
+        O(backend)=V(vertex) where the explicit disable is honored.
     type: int
     default: 0
+  thinking_level:
+    description:
+      - Reasoning effort level on thinking-capable models (e.g. gemini-3.7-flash).
+      - Choices are V(minimal), V(low), V(medium), or V(high).
+      - Can be combined with or used instead of O(thinking_budget).
+    type: str
+    choices: [minimal, low, medium, high]
+    aliases: [effort, effort_level]
   response_schema:
     description:
       - 'JSON Schema-style dict describing the required shape of the response, e.g. C({"type": "object", "properties": {...}}).'
@@ -258,6 +279,11 @@ def main():
         top_k=dict(type="int"),
         stop_sequences=dict(type="list", elements="str"),
         thinking_budget=dict(type="int", default=0),
+        thinking_level=dict(
+            type="str",
+            choices=["minimal", "low", "medium", "high"],
+            aliases=["effort", "effort_level"],
+        ),
         response_schema=dict(type="dict"),
         response_mime_type=dict(type="str", choices=["text/plain", "application/json"]),
         tools=dict(type="list", elements="dict"),
@@ -278,8 +304,28 @@ def main():
 
     config_kwargs = dict(
         max_output_tokens=module.params["max_output_tokens"],
-        thinking_config=types.ThinkingConfig(thinking_budget=module.params["thinking_budget"]),
     )
+    # The Developer API (backend=api) rejects an explicit
+    # ThinkingConfig(thinking_budget=0) with 400 INVALID_ARGUMENT, so a
+    # budget of 0 must omit thinking_config entirely on that backend --
+    # verified live 2026-08-24: gemini-3.6-flash on backend=api returned a
+    # nonzero thoughts_token_count with no thinking_config sent at all, so
+    # this is a real limitation, not just an API quirk to work around
+    # silently. See thinking_budget's DOCUMENTATION for the consequence.
+    #
+    # Vertex AI (backend=vertex) has no such restriction and DOES honor an
+    # explicit thinking_budget=0 to disable thinking, so send it there
+    # unconditionally to preserve the deterministic-output-budget guarantee.
+    thinking_kwargs = {}
+    backend = module.params["backend"]
+    if backend == "vertex":
+        thinking_kwargs["thinking_budget"] = module.params["thinking_budget"]
+    elif module.params["thinking_budget"] > 0:
+        thinking_kwargs["thinking_budget"] = module.params["thinking_budget"]
+    if module.params.get("thinking_level"):
+        thinking_kwargs["thinking_level"] = module.params["thinking_level"]
+    if thinking_kwargs:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(**thinking_kwargs)
     optional_keys = (
         "system_instruction",
         "temperature",
