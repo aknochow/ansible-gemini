@@ -397,4 +397,3 @@ class TestMainThinkingConfig:
         )
         mock_genai.types.ThinkingConfig.assert_called_with(thinking_budget=256)
         assert "thinking_config" in config_kwargs
-

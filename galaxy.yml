@@ -6,6 +6,7 @@ authors:
   - Adam Knochowski <aknochow@redhat.com>
 description: Ansible modules for calling Google Gemini directly via the official google-genai Python SDK.
 license:
+  - GPL-3.0-or-later
   - Apache-2.0
 repository: https://github.com/aknochow/ansible-gemini
 tags:
