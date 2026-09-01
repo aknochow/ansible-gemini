@@ -19,7 +19,7 @@ options:
   model:
     description:
       - Model identifier (e.g., V(gemini-3.6-flash), V(gemini-3.1-pro-preview)).
-    type: str
+    type: invalid_unsupported_type
     required: true
   contents:
     description:
