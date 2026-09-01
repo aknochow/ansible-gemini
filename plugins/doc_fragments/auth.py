@@ -18,7 +18,8 @@ options:
     description:
       - API key for the direct Gemini API.
       - Required when O(backend=api).
-      - If the value is not specified, the value of the E(GEMINI_API_KEY) or E(GOOGLE_API_KEY) environment variable will be used.
+      - If the value is not specified, the value of the E(GEMINI_API_KEY) or
+        E(GOOGLE_API_KEY) environment variable will be used.
     type: str
   project_id:
     description:

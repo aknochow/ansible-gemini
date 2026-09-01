@@ -66,7 +66,6 @@ cached_content_token_count:
 """
 
 from ansible.module_utils.basic import AnsibleModule
-
 from ansible_collections.aknochow.gemini.plugins.module_utils.gemini_client import (
     PROVIDER_ARGSPEC,
     get_client,
