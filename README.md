@@ -299,3 +299,8 @@ workload, this isn't a general "always use X" conclusion.
 ansible-playbook examples/model_comparison.yml \
   -e vertex_project=your-gcp-project-id -e vertex_location=global
 ```
+
+## License
+
+- **Modules** (`plugins/modules/`): GNU General Public License v3.0+ (`GPL-3.0-or-later`)
+- **Module Utilities, Plugins, Tests & Documentation**: Apache License 2.0 (`Apache-2.0`)
