@@ -1,0 +1,3 @@
+plugins/modules/batch.py validate-modules:missing-gplv3-license
+plugins/modules/count_tokens.py validate-modules:missing-gplv3-license
+plugins/modules/generate.py validate-modules:missing-gplv3-license

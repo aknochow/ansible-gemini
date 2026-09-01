@@ -9,7 +9,7 @@ module: generate
 short_description: Generate content with Gemini and return the response
 description:
   - Calls C(client.models.generate_content()) directly via the official google-genai Python SDK.
-  - Returns both the raw response and flattened convenience fields for use with O(register).
+  - Returns both the raw response and flattened convenience fields for use with C(register).
 version_added: "0.1.0"
 author:
   - Adam Knochowski (@aknochow)
@@ -96,13 +96,17 @@ options:
     choices: [text/plain, application/json]
   tools:
     description:
-      - 'List of tool dicts, matching the SDK''s own C(Tool) shape directly, e.g. C({"function_declarations": [{"name": ..., "description": ..., "parameters": {...}}]}).'
+      - >-
+        List of tool dicts, matching the SDK's own C(Tool) shape directly,
+        e.g. C({"function_declarations": [{"name": ..., "description": ..., "parameters": {...}}]}).
       - Function calls the model makes are returned in the RV(tool_calls) return value.
     type: list
     elements: dict
   tool_config:
     description:
-      - 'Tool-calling behavior, matching the SDK''s own C(ToolConfig) shape directly, e.g. C({"function_calling_config": {"mode": "ANY", "allowed_function_names": [...]}}).'
+      - >-
+        Tool-calling behavior, matching the SDK's own C(ToolConfig) shape directly,
+        e.g. C({"function_calling_config": {"mode": "ANY", "allowed_function_names": [...]}}).
     type: dict
   labels:
     description:
@@ -272,7 +276,7 @@ def main():
     argument_spec = dict(
         model=dict(type="str", required=True),
         contents=dict(type="raw", required=True),
-        max_output_tokens=dict(type="int", required=True),
+        max_output_tokens=dict(type="int", required=True, no_log=False),
         system_instruction=dict(type="str"),
         temperature=dict(type="float"),
         top_p=dict(type="float"),
