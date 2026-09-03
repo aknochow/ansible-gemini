@@ -1,0 +1,23 @@
+---
+- name: aknochow.gemini.generate structured output example
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Extract structured fields from a bug report
+      aknochow.gemini.generate:
+        model: gemini-3.6-flash
+        max_output_tokens: 1024
+        contents: >-
+          Extract the name and severity from this bug report:
+          "Login page throws a 500 error for all users since the last deploy."
+        response_schema:
+          type: object
+          properties:
+            name: {type: string}
+            severity: {type: string, enum: [low, medium, high, critical]}
+          required: [name, severity]
+      register: result
+
+    - name: Show the parsed structured result
+      ansible.builtin.debug:
+        msg: "{{ result.structured.name }} is {{ result.structured.severity }}"

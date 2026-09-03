@@ -1,0 +1,29 @@
+---
+- name: aknochow.gemini.batch example
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Submit a batch of summarization requests
+      aknochow.gemini.batch:
+        model: gemini-3.6-flash
+        display_name: changelog-summaries
+        requests:
+          - contents: "Summarize this changelog entry in one sentence: {{ changelog_one }}"
+            metadata:
+              source: changelog-1
+          - contents: "Summarize this changelog entry in one sentence: {{ changelog_two }}"
+            metadata:
+              source: changelog-2
+      register: batch
+
+    - name: Wait for the batch to finish
+      aknochow.gemini.batch:
+        name: "{{ batch.name }}"
+        wait: true
+        wait_timeout: 1800
+      register: finished
+
+    - name: Show each result
+      ansible.builtin.debug:
+        msg: "{{ item.metadata.source }}: {{ item.text }}"
+      loop: "{{ finished.results }}"
