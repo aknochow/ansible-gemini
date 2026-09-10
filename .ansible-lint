@@ -1,0 +1,14 @@
+---
+profile: min
+
+mock_modules:
+  - aknochow.gemini.batch
+  - aknochow.gemini.count_tokens
+  - aknochow.gemini.generate
+
+warn_list:
+  - ignore-errors
+
+exclude_paths:
+  - .venv/
+  - tests/
