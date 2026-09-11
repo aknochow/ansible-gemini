@@ -49,6 +49,12 @@ all supported — see below.
 pip install 'google-genai>=1.0.0'
 ```
 
+Install the collection itself from Galaxy (`ansible-galaxy collection install
+aknochow.gemini`) or, in a venv, as a pip wheel that lands on Ansible's
+`ansible_collections` sys.path (`pip install .` from this checkout). The PyPI
+name is `aknochow-gemini`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+wheel layout and a two-collection smoke test.
+
 ## Auth
 
 Set `backend` to `api` (default) or `vertex`. Each mode's credentials can
