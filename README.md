@@ -1,5 +1,7 @@
 # aknochow.gemini
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/aknochow/ansible-gemini/badge)](https://scorecard.dev/viewer/?uri=github.com/aknochow/ansible-gemini)
+
 Ansible collection for calling Google's Gemini models directly via the
 official [google-genai Python SDK](https://github.com/googleapis/python-genai)
 — not a CLI wrapper. Built for deterministic, structured invocation from
