@@ -37,7 +37,7 @@ def _import_real_genai():
 
 
 def test_installed_sdk_meets_the_collection_floor():
-    assert Version(version("google-genai")) >= Version("1.0.0")
+    assert Version(version("google-genai")) >= Version("2.27.0")
 
 
 def test_client_http_options_and_model_methods_exist():
